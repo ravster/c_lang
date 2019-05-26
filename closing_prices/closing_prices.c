@@ -5,12 +5,16 @@
 
 /*
   gcc -o closing_prices closing_prices.c
-  sed -n "2,71p" sp500_5_years.csv | cut -f 5 -d ',' | ./closing_prices 30 7
+  cut -f 5 -d ',' sp500_5_years.csv | tail -n +2 | ./closing_prices 320 3
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+
+typedef struct {
+  double open, close;
+} tick;
 
 /*
   TODO:
@@ -22,7 +26,7 @@ int
 main(int argc, char **argv) {
   // Check that we got a number for how many lines to analyze from STDIN
   if (argc < 3) {
-	printf("How many lines to parse from STDIN, and what is the period of the moving-average?\n");
+	printf("Usage: ./closing_prices NUM_LINES MOVING_AVERAGE_WINDOW \n");
 	return EINVAL;
   }
 
