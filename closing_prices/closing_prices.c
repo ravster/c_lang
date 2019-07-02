@@ -17,7 +17,7 @@
 
 typedef struct {
   double open, high, low, close, volume,
-	moving_average;
+	moving_average, true_range;
 } tick;
 
 // Split string
@@ -52,10 +52,27 @@ void calculate_moving_average(int period, GArray* array) {
   return;
 }
 
+double max3(double high, double low, double prev_close) {
+  double a, b, c, d;
+  a = ABS(high - low);
+  b = ABS(high - prev_close);
+  c = ABS(prev_close - low);
+
+  d = MAX(a, b);				/* Shenanigans because Glib and C do not allow multivariate MAX */
+  return MAX(c, d);
+}
+
+void calc_true_range(GArray* data) {
+  for(int i = 1; i < data->len; i++) {
+	tick* this = &g_array_index(data, tick, i);
+	tick previous = g_array_index(data, tick, i - 1);
+
+	this->true_range = max3(this->high, this->low, previous.close);
+  }
+}
+
 /*
   TODO:
-  - Parse into a struct so we can gather data on more fields
-  Probably a good time to add CSV support?
   - Figure out why we can't check for errno after the strtod() call
 */
 int
@@ -83,8 +100,10 @@ main(int argc, char **argv) {
   printf("size of array: %d\n", arr->len);
 
   calculate_moving_average(5, arr);
+  calc_true_range(arr);
 
   for(int i = 20; i < 30; i++) {
-	printf("idx %d - moving-average %f\n", i, g_array_index(arr, tick, i).moving_average);
+	tick this = g_array_index(arr, tick, i);
+	printf("idx %d; %f, %f, %f; true_range: %f\n", i, this.high, this.low, this.close, this.true_range);
   }
 }
