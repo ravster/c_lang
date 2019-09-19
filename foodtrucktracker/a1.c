@@ -1,3 +1,6 @@
+/* This program sets up the relationships amongst the 5 fundamental entities for a food-
+   truck tracker, and then instantiates them as an example. */
+
 /*
   time gcc -o a1 a1.c
 */
@@ -7,27 +10,27 @@
 
 typedef char* string;
 
-typedef struct {
+typedef struct tenant {
   string name, phone, website;
 } tenant;
 
-typedef struct {
+typedef struct truck {
   string license;
   tenant* tenant;
 } truck;
 
-typedef struct {
+typedef struct location {
   string name, address;
   int longitude, latitude;
 } location;
 
-typedef struct {
+typedef struct booking {
   truck* truck;
   location* location;
   int start, end;
 } booking;
 
-typedef struct {
+typedef struct user {
   string name;
   booking* bookings;
 } user;
@@ -61,6 +64,12 @@ booking new_booking(truck* truck, location* location, int start, int end) {
   return out;
 }
 
+user new_user(string name) {
+  user out = {.name = name};
+
+  return out;
+}
+
 int
 main(int argc, char **argv) {
   // Create tenant
@@ -77,5 +86,30 @@ main(int argc, char **argv) {
 
   // Create booking
   booking b1 = new_booking(&tr1, &l1, 1568866333, 1568991600);
-  printf("New booking is for truck '%s' at '%s'\n", b1.truck->license, b1.location->name);
+  printf("New booking is for truck '%s' at '%s'\n",
+	 b1.truck->license,
+	 b1.location->name);
+
+  // Create user
+  user u1 = new_user("Bob");
+  u1.bookings = &b1;
+  printf("New user '%s' with bookings\n- %d\n", u1.name, u1.bookings->start);
+
+  // Learn how pointers to pointers function as a list
+  booking** all_bookings = malloc(8 * sizeof(booking*));
+
+  booking b2 = new_booking(&tr1, &l1, 1568866334, 1568991601);
+  booking b3 = new_booking(&tr1, &l1, 1568866335, 1568991602);
+  booking b4 = new_booking(&tr1, &l1, 1568866336, 1568991603);
+  booking b5 = new_booking(&tr1, &l1, 1568866337, 1568991604);
+
+  all_bookings[0] = &b1;
+  all_bookings[1] = &b2;
+  all_bookings[2] = &b3;
+  all_bookings[3] = &b4;
+  all_bookings[4] = &b5;
+
+  for(int i = 0; all_bookings[i] != NULL; i++) {
+    printf("idx %d starts at: %d\n", i, all_bookings[i]->start);
+  }
 }
