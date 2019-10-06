@@ -7,6 +7,24 @@
 
 typedef char* string;
 
+// Return BOOL
+int is_empty(GSList* const list) {
+  return (list == NULL);
+}
+
+// Return BOOL
+int check_head(GSList* const list, char c) {
+  if (is_empty(list)) {
+    return 0;
+  }
+
+  if (c == (char) list->data) {
+    return 1;
+  }
+
+  return 0;
+}
+
 string is_balanced(string input) {
   GSList* list = NULL;
   char* c = input; // Use explicitly as a pointer
@@ -26,10 +44,7 @@ string is_balanced(string input) {
 
       break;
     case ')':
-      if (list == NULL) {
-	return "NO";
-      }
-      if ('(' == (char) list->data) {
+      if (check_head(list, '(')) {
 	list = g_slist_remove(list, (gpointer) '(');
       } else {
 	return "NO";
@@ -37,7 +52,7 @@ string is_balanced(string input) {
 
       break;
     case ']':
-      if ('[' == (char) list->data) {
+      if (check_head(list, '[')) {
 	list = g_slist_remove(list, (gpointer) '[');
       } else {
 	return "NO";
@@ -45,7 +60,7 @@ string is_balanced(string input) {
 
       break;
     case '}':
-      if ('{' == (char) list->data) {
+      if (check_head(list, '{')) {
 	list = g_slist_remove(list, (gpointer) '{');
       } else {
 	return "NO";
@@ -57,7 +72,7 @@ string is_balanced(string input) {
     c++;
   }
 
-  if (list == NULL) { // Empty list
+  if (is_empty(list)) {
     return "YES";
   } else {
     return "NO";
