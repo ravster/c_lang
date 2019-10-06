@@ -1,5 +1,11 @@
 /*
+This program uses a linked-list to implement a stack to find out if a particular string contains balanced braces.
+ */
+
+/*
   Started 0910
+  Done with Glib's linked lists
+  Ended 1051 - -> 1h40m
  */
 
 #include <stdio.h>
