@@ -26,6 +26,9 @@ string is_balanced(string input) {
 
       break;
     case ')':
+      if (list == NULL) {
+	return "NO";
+      }
       if ('(' == (char) list->data) {
 	list = g_slist_remove(list, (gpointer) '(');
       } else {
