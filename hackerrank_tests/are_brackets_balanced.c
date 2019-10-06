@@ -12,8 +12,6 @@ string is_balanced(string input) {
   char* c = input; // Use explicitly as a pointer
 
   while (c && *c) {
-    printf("z1 %c\n", c[0]);
-
     switch(c[0]) {
     case '{':
       list = g_slist_prepend(list, (gpointer) '{');
@@ -64,9 +62,7 @@ string is_balanced(string input) {
 }
 
 int main(int argc, char** argv) {
-  string input = "{{[[[()]]]}}";
+  string output = is_balanced(argv[1]);
 
-  string output = is_balanced(input);
-
-  printf("Foo\n%s\n", output);
+  printf("%s\n", output);
 }
