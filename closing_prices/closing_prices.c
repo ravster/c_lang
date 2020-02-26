@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <glib.h>
+#include <string.h>
 
 typedef struct {
   double open, high, low, close, volume,
@@ -24,13 +24,17 @@ typedef struct {
 // Return populated tick struct
 tick parse_tick(char* line) {
   char* delim = ",";
-  gchar** strings = g_strsplit(line, delim, 0);
+  char* ptr = strtok(line, delim);
+  ptr = strtok(NULL, delim);
 
   tick tick1;
-  tick1.open = g_strtod(strings[1], NULL);
-  tick1.high = g_strtod(strings[2], NULL);
-  tick1.low = g_strtod(strings[3], NULL);
-  tick1.close = g_strtod(strings[4], NULL);
+  tick1.open = atof(ptr);
+  ptr = strtok(NULL, delim);
+  tick1.high = atof(ptr);
+  ptr = strtok(NULL, delim);
+  tick1.low = atof(ptr);
+  ptr = strtok(NULL, delim);
+  tick1.close = atof(ptr);
 
   return tick1;
 }
@@ -39,33 +43,44 @@ tick parse_tick(char* line) {
    saves it in the structs in the array.
    This operation is embarrassingly parallel, and a prime location to use something like
    OpenMP. */
-void calculate_moving_average(int period, GArray* array) {
-  for(int i = period; i < array->len; i++) {
+void calculate_moving_average(int period, tick* array, int array_len) {
+  for(int i = period; i < array_len; i++) {
 	double sum = 0.0;
 	for(int j = i - period; j < i; j++) {
-	  sum += g_array_index(array, tick, j).close;
+	  sum += array[j].close;
 	}
 
-	g_array_index(array, tick, i).moving_average = sum / period;
+	array[i].moving_average = sum / period;
   }
 
   return;
 }
 
 double max3(double high, double low, double prev_close) {
-  double a, b, c, d;
-  a = ABS(high - low);
-  b = ABS(high - prev_close);
-  c = ABS(prev_close - low);
+  double max, temp;
+  max = high - low;
+  temp = high - prev_close;
+  if (temp < 0) {
+    temp = -temp;
+  }
+  if (temp > max) {
+    max = temp;
+  }
+  temp = prev_close - low;
+  if (temp < 0) {
+    temp = -temp;
+  }
+  if (temp > max) {
+    max = temp;
+  }
 
-  d = MAX(a, b);				/* Shenanigans because Glib and C do not allow multivariate MAX */
-  return MAX(c, d);
+  return max;
 }
 
-void calc_true_range(GArray* data) {
-  for(int i = 1; i < data->len; i++) {
-	tick* this = &g_array_index(data, tick, i);
-	tick previous = g_array_index(data, tick, i - 1);
+void calc_true_range(tick* data, int length) {
+  for(int i = 1; i < length; i++) {
+	tick* this = &data[i];
+	tick previous = data[i - 1];
 
 	this->true_range = max3(this->high, this->low, previous.close);
   }
@@ -77,6 +92,12 @@ void calc_true_range(GArray* data) {
 */
 int
 main(int argc, char **argv) {
+  char* a1 = argv[1];
+  int a2 = atoi(a1);
+  if (a2 == 0) {
+    fprintf(stderr, "arg 1 on command line must be an int for the size of the array.\n");
+    return 1;
+  }
   FILE* fp = NULL;
   char* filepath = "sp500_5_years.csv";
 
@@ -88,22 +109,24 @@ main(int argc, char **argv) {
 
   char* line = NULL;
   size_t len = 100;
-  GArray* arr = g_array_new(FALSE, FALSE, sizeof(tick));
+  tick arr[a2];
 
   // Read line from file, create tick struct, append tick to array
+  int i = 0;
   while (getline(&line, &len, fp) != -1) {
 	tick tick1 = parse_tick(line);
 
-	g_array_append_val(arr, tick1);
+	arr[i] = tick1;
+	i++;
   }
 
-  printf("size of array: %d\n", arr->len);
+  printf("size of array: %d\n", i);
 
-  calculate_moving_average(5, arr);
-  calc_true_range(arr);
+  calculate_moving_average(5, arr, i);
+  calc_true_range(arr, i);
 
   for(int i = 20; i < 30; i++) {
-	tick this = g_array_index(arr, tick, i);
+	tick this = arr[i];
 	printf("idx %d; %f, %f, %f; true_range: %f\n", i, this.high, this.low, this.close, this.true_range);
   }
 }
