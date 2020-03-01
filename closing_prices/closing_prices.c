@@ -3,11 +3,17 @@
   STDOUT: 5-day moving average of prices
 */
 
-// TODO:
-// Calc moving average in parallel
+/*
+TODO:
+- Set profit = 0
+- Find min(100) ticks
+- If low < min(100), then buy
+- if low < (buy-price - 5%_of_buy_price), then sell and add to profit.
+- If (high > max(50)) && (currently have bought), then sell & add to profit.
+*/
 
 /*
-  time gcc -L/usr/lib/x86_64-linux-gnu -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -o closing_prices closing_prices.c -lglib-2.0
+  time gcc -o closing_prices closing_prices.c
 */
 
 #include <stdio.h>
@@ -17,11 +23,9 @@
 
 typedef struct {
   double open, high, low, close, volume,
-	moving_average, true_range;
+    moving_average, true_range, min_100, max_50;
 } tick;
 
-// Split string
-// Return populated tick struct
 tick parse_tick(char* line) {
   char* delim = ",";
   char* ptr = strtok(line, delim);
@@ -39,7 +43,7 @@ tick parse_tick(char* line) {
   return tick1;
 }
 
-/* This function calculates a moving average for a given period for a given GArray and
+/* This function calculates a moving average for a given period for a given array and
    saves it in the structs in the array.
    This operation is embarrassingly parallel, and a prime location to use something like
    OpenMP. */
@@ -86,10 +90,46 @@ void calc_true_range(tick* data, int length) {
   }
 }
 
-/*
-  TODO:
-  - Figure out why we can't check for errno after the strtod() call
-*/
+double min(const double a, const double b) {
+  if (a < b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
+void calc_min_100(tick* arr, int arr_len) {
+  for(int i = 99; i < arr_len; i++) {
+  double minimum = 20000;
+    for (int j = 99; j >= 0; j--) {
+      /* We might be able to optimize the inner loop by comparing the current min to the
+	 next oldest tick.low.  If oldest tick.low > min, then we need to only compare
+	 newest tick.low to min.  This will remove the need for so many reads. */
+      minimum = min(minimum, arr[i-j].low);
+    }
+    arr[i].min_100 = minimum;
+  }
+}
+
+double max(const double a, const double b) {
+  if (a > b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
+void calc_max_50(tick* arr, const int arr_len) {
+  for(int i = 49; i < arr_len; i++) {
+    double maximum = 0;
+    for (int j = 49; j >= 0; j--) {
+      /* We can optimize this inner loop the same way we do for calc_min_100 */
+      maximum = max(maximum, arr[i-j].high);
+    }
+    arr[i].max_50 = maximum;
+  }
+}
+
 int
 main(int argc, char **argv) {
   char* a1 = argv[1];
@@ -112,21 +152,23 @@ main(int argc, char **argv) {
   tick arr[a2];
 
   // Read line from file, create tick struct, append tick to array
-  int i = 0;
+  int arr_len = 0;
   while (getline(&line, &len, fp) != -1) {
 	tick tick1 = parse_tick(line);
 
-	arr[i] = tick1;
-	i++;
+	arr[arr_len] = tick1;
+	arr_len++;
   }
 
-  printf("size of array: %d\n", i);
+  printf("size of array: %d\n", arr_len);
 
-  calculate_moving_average(5, arr, i);
-  calc_true_range(arr, i);
+  calculate_moving_average(5, arr, arr_len);
+  calc_true_range(arr, arr_len);
+  calc_min_100(arr, arr_len);
+  calc_max_50(arr, arr_len);
 
-  for(int i = 20; i < 30; i++) {
+  for(int i = 100; i < 120; i++) {
 	tick this = arr[i];
-	printf("idx %d; %f, %f, %f; true_range: %f\n", i, this.high, this.low, this.close, this.true_range);
+	printf("idx %d; %f, %f, %f; true_range: %f, min100: %f, max50: %f\n", i, this.high, this.low, this.close, this.true_range, this.min_100, this.max_50);
   }
 }
